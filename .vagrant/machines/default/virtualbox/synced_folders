@@ -1,0 +1,1 @@
+{"virtualbox":{"/itorch_data":{"guestpath":"/itorch_data","hostpath":"/home/svanschalkwyk/vagrant/itorch_data","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"/home/svanschalkwyk/vagrant/vagrant-torch7","disabled":false,"__vagrantfile":true}}}
