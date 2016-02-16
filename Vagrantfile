@@ -10,7 +10,8 @@ Vagrant.configure(2) do |config|
   config.vm.network "public_network", ip: "192.168.4.112", bridge: "enp5s0f1"
   config.vm.network "public_network", bridge: "wlxc83a35cc825f"
 
-  config.vm.synced_folder "../itorch_data", "/home/vagrant/itorch_data"
+  config.vm.synced_folder "../itorch_notebooks", "home/vagrant/itorch_notebooks"
+ config.vm.synced_folder "../ipython_notebooks", "home/vagrant/ipython_notebooks"
 
   config.vm.provider "virtualbox" do |vb|
     vb.gui = true
@@ -29,19 +30,19 @@ Vagrant.configure(2) do |config|
   $startipy= <<-SPYEOF
      cat > /home/vagrant/startup-scripts/run-ipython-notebook.sh << 'EOF'
 export PATH=/home/vagrant/torch/install/bin:$PATH
-ipython notebook --no-browser --port=8888 --ip=192.168.4.112 --notebook-dir=/home/vagrant/ipy --profile=nbserver > /tmp/ipynb.log 2>&1 &
+ipython notebook --no-browser --port=8888 --ip=192.168.4.112 --notebook-dir=/home/vagrant/ipython_notebooks --profile=nbserver > /tmp/ipynb.log 2>&1 &
 EOF
 chmod +x run-ipython-notebook.sh
-mkdir /home/vagrant/ipy
+mkdir /home/vagrant/ipython_notebooks
   SPYEOF
 
   $startit= <<-STIEOF
     cat > /home/vagrant/startup-scripts/run-itorch-notebook.sh << 'EOF'
 export PATH=/home/vagrant/torch/install/bin:$PATH
-itorch notebook --no-browser --port=8889 --ip=192.168.4.112 --notebook-dir=/home/vagrant/it > /tmp/itnb.log 2>&1 &
+itorch notebook --no-browser --port=8889 --ip=192.168.4.112 --notebook-dir=/home/vagrant/itorch_notebooks > /tmp/itnb.log 2>&1 &
 EOF
 chmod +x run-itorch-notebook.sh
-mkdir /home/vagrant/it
+mkdir /home/vagrant/itorch_notebooks
   STIEOF
 
  $rclocal= <<-RCLEOF
