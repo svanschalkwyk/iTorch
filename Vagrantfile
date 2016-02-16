@@ -3,14 +3,14 @@
 
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/wily64"
-  config.vm.box_check_update = true
+  config.vm.box_check_update = false
   #config.vm.network "forwarded_port", guest: 8888, host: 9888
   #config.vm.network "forwarded_port", guest: 22, host: 9022
 
-  config.vm.network "public_network", ip: "192.168.4.126", bridge: "enp2s0f0"
-  config.vm.network "public_network", bridge: "wlp0s26u1u6"
+  config.vm.network "public_network", ip: "192.168.4.112", bridge: "enp5s0f1"
+  config.vm.network "public_network", bridge: "wlxc83a35cc825f"
 
-  config.vm.synced_folder "../itorch_data", "/itorch_data"
+  config.vm.synced_folder "../itorch_data", "/home/vagrant/itorch_data"
 
   config.vm.provider "virtualbox" do |vb|
     vb.gui = true
@@ -25,36 +25,85 @@ Vagrant.configure(2) do |config|
   # config.push.define "atlas" do |push|
   #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
   # end
-  
-  
-  $script = <<-SCRIPT
-     sudo apt-get update
-     sudo apt-get -y install git cmake libreadline-dev libzmq3-dev libssl-dev ntpdate
-     sudo apt-get update
-     sudo ntpdate ntp.ubuntu.com
-     sudo apt-get -y install ipython3 ipython3-notebook python-zmq luarocks uuid lua-cjson 
-     sudo luarocks install lbase64 
-     sudo luarocks install luacrypto 
-     sudo luarocks install luafilesystem 
-     sudo luarocks install penlight
 
+  $startipy= <<-SPYEOF
+     cat > /home/vagrant/startup-scripts/run-ipython-notebook.sh << 'EOF'
+export PATH=/home/vagrant/torch/install/bin:$PATH
+ipython notebook --no-browser --port=8888 --ip=192.168.4.112 --notebook-dir=/home/vagrant/ipy --profile=nbserver > /tmp/ipynb.log 2>&1 &
+EOF
+  SPYEOF
+
+  $startit= <<-STIEOF
+    cat > /home/vagrant/startup-scripts/run-itorch-notebook.sh << 'EOF'
+export PATH=/home/vagrant/torch/install/bin:$PATH
+itorch notebook --no-browser --port=8889 --ip=192.168.4.112 --notebook-dir=/home/vagrant/it > /tmp/itnb.log 2>&1 &
+EOF
+  STIEOF
+
+ $rclocal= <<-RCLEOF
+     sudo -u root cat > /etc/rc.local << 'EOF'
+#!/bin/sh -e
+sudo -u vagrant /home/vagrant/startup-scripts/run-itorch-notebook.sh
+sudo -u vagrant /home/vagrant/startup-scripts/run-ipython-notebook.sh
+exit 0
+EOF
+  RCLEOF
+
+  config.vm.provision "shell", inline: 'mkdir /home/vagrant/startup-scripts', privileged: false
+  config.vm.provision "shell", inline: $startipy, privileged: false
+  config.vm.provision "shell", inline: $startit, privileged: false
+  config.vm.provision "shell", inline: $rclocal, privileged: true
+
+
+  $sysinstall= <<-DLOAD
+     sudo apt-get update
+     sudo apt-get -y install git cmake libreadline-dev libssl-dev ntpdate
+     sudo apt-get -y install ipython3 ipython3-notebook python-zmq luarocks lua-cjson 
+     # add some decoders for iTorch audio and video
+     sudo apt-get install gstreamer1.0-libav -y
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master lbase64 
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master env
+#     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master lzmq ZMQ_DIR=/usr/local
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master luacrypto 
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master luafilesystem 
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master penlight
+     sudo luarocks install --server=https://raw.githubusercontent.com/torch/rocks/master uuid
+     sudo luarocks --server=https://raw.githubusercontent.com/torch/rocks/master install image
+  DLOAD
+
+  $script= <<-SCRIPT
+     sudo ntpdate ntp.ubuntu.com
      sudo ln -s /usr/bin/ipython3 /usr/bin/ipython
-     curl -sk https://raw.githubusercontent.com/torch/ezinstall/master/install-deps | bash
-     git clone https://github.com/torch/distro.git /home/vagrant/torch --recursive
-     cd /home/vagrant/torch; sudo ./install.sh
-     echo ". /home/vagrant/torch/install/bin/torch-activate" >> /home/vagrant/.bashrc
-     source ~/.bashrc
-     git clone https://github.com/facebook/iTorch.git /home/vagrant/iTorch
-     cd /home/vagrant/iTorch; sudo luarocks make 
-     sudo ufw disable
-     ./home/vagrant/torch/install/bin/torch-activate 
-     itorch notebook --no-browser --port=8889 --ip=192.168.4.126
-     ipython notebook --no-browser --port=8888 --ip=192.168.4.126
+
+     cd /home/vagrant
+     curl -sk http://download.zeromq.org/zeromq-4.0.5.tar.gz | tar xzv
+     cd zeromq-4.0.5
+     ./configure
+     make
+     sudo make install
+     cd ..
      
+     curl -sk https://raw.githubusercontent.com/torch/ezinstall/master/install-deps | bash
+
+     git clone https://github.com/torch/distro.git /home/vagrant/torch --recursive
+     cd /home/vagrant/torch
+     ./install.sh
+     #sudo chown vagrant:vagrant /home/vagrant/ -R
+     echo '. /home/vagrant/torch/install/bin/torch-activate' >> /home/vagrant/.bashrc
+     source ~/.bashrc
+     
+     git clone https://github.com/facebook/iTorch.git /home/vagrant/iTorch --recursive
+     #sudo chown vagrant:vagrant /home/vagrant -R
+     cd /home/vagrant/iTorch
+     env "PATH=$PATH" luarocks make 
+     sudo chown -R $USER $(dirname $(ipython locate profile))
+     
+     sudo ufw disable
    SCRIPT
    
+  config.vm.provision "shell", inline: $sysinstall, privileged: true
   config.vm.provision "shell", inline: $script, privileged: false
-  
+    
 
   # Shell provisioning
   #config.vm.provider "shell" do |s|
