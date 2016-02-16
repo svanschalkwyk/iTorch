@@ -31,6 +31,8 @@ Vagrant.configure(2) do |config|
 export PATH=/home/vagrant/torch/install/bin:$PATH
 ipython notebook --no-browser --port=8888 --ip=192.168.4.112 --notebook-dir=/home/vagrant/ipy --profile=nbserver > /tmp/ipynb.log 2>&1 &
 EOF
+chmod +x run-ipython-notebook.sh
+mkdir /home/vagrant/ipy
   SPYEOF
 
   $startit= <<-STIEOF
@@ -38,6 +40,8 @@ EOF
 export PATH=/home/vagrant/torch/install/bin:$PATH
 itorch notebook --no-browser --port=8889 --ip=192.168.4.112 --notebook-dir=/home/vagrant/it > /tmp/itnb.log 2>&1 &
 EOF
+chmod +x run-itorch-notebook.sh
+mkdir /home/vagrant/it
   STIEOF
 
  $rclocal= <<-RCLEOF
